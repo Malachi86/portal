@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-learning",
+      "description": "Student learning online with a laptop",
+      "imageUrl": "https://picsum.photos/seed/learn/1200/600",
+      "imageHint": "online learning"
+    },
+    {
+      "id": "course-coding",
+      "description": "Coding course thumbnail",
+      "imageUrl": "https://picsum.photos/seed/code/600/400",
+      "imageHint": "coding programming"
+    },
+    {
+      "id": "course-design",
+      "description": "Design course thumbnail",
+      "imageUrl": "https://picsum.photos/seed/design/600/400",
+      "imageHint": "graphic design"
+    },
+    {
+      "id": "course-math",
+      "description": "Mathematics course thumbnail",
+      "imageUrl": "https://picsum.photos/seed/math/600/400",
+      "imageHint": "mathematics science"
+    },
+    {
+      "id": "instructor-avatar",
+      "description": "Instructor profile picture",
+      "imageUrl": "https://picsum.photos/seed/instructor/200/200",
+      "imageHint": "person teacher"
+    }
+  ]
 }

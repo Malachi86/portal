@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Send, AlertCircle, Monitor, Building, Clock, Loader2, ShieldCheck, Zap } from 'lucide-react';
-import { getSubjectsAction, getLabsAction, getRoomsAction, getPcsAction, addLabRequestAction } from '@/app/actions/dbActions';
-import { Subject, Lab, Room, Pc } from '@/utils/storage';
+import { getLabsAction, getRoomsAction, getPcsAction, addLabRequestAction } from '@/app/actions/dbActions';
+import { Lab, Room, Pc } from '@/utils/storage';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 
 export default function MakeRequest() {
   const { user } = useAuth();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [availablePCs, setAvailablePCs] = useState<Pc[]>([]);
@@ -22,7 +21,6 @@ export default function MakeRequest() {
   const [initialLoading, setInitialLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    subjectId: '',
     type: 'lab' as 'lab' | 'room',
     requestType: 'use' as 'use' | 'handle',
     locationId: '',
@@ -48,14 +46,11 @@ export default function MakeRequest() {
   }, [formData.locationId, formData.type]);
 
   const loadInitialData = async () => {
-    if (!user) return;
     try {
-      const [subjs, allLabs, allRooms] = await Promise.all([
-        getSubjectsAction(),
+      const [allLabs, allRooms] = await Promise.all([
         getLabsAction(),
         getRoomsAction()
       ]);
-      setSubjects(subjs);
       setLabs(allLabs);
       setRooms(allRooms);
     } finally {
@@ -76,29 +71,27 @@ export default function MakeRequest() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!formData.subjectId || !formData.locationId || !formData.startTime || !formData.endTime || !formData.pcId) {
-      toast.error('Required fields missing. Please select a Subject, Unit, PC, and Time.');
+    if (!formData.locationId || !formData.startTime || !formData.endTime || (formData.type === 'lab' && !formData.pcId)) {
+      toast.error('Required fields missing.');
       return;
     }
     
     setLoading(true);
     try {
-        const today = new Date().toISOString().split('T')[0];
         await addLabRequestAction({
           studentId: user.id,
           studentName: user.name,
-          subjectId: formData.subjectId,
+          subjectId: formData.requestType === 'handle' ? 'Facility Lease' : 'Personal Usage',
           labId: formData.locationId,
           pcId: formData.pcId,
-          startTime: `${today}T${formData.startTime}`,
-          endTime: `${today}T${formData.endTime}`,
+          startTime: new Date().toISOString().split('T')[0] + 'T' + formData.startTime,
+          endTime: new Date().toISOString().split('T')[0] + 'T' + formData.endTime,
           reason: formData.reason,
           status: 'pending',
           requestType: formData.requestType
         });
-        toast.success("Registry Signal Sent!", { description: "Wait for Admin or Faculty Handler authorization." });
+        toast.success("Signal Sent! Awaiting authorization.");
         setFormData({ 
-          subjectId: '', 
           type: 'lab', 
           requestType: 'use', 
           locationId: '', 
@@ -108,7 +101,7 @@ export default function MakeRequest() {
           reason: '' 
         });
     } catch {
-        toast.error("Transmission failed. Database unreachable.");
+        toast.error("Transmission failed.");
     } finally {
         setLoading(false);
     }
@@ -120,17 +113,16 @@ export default function MakeRequest() {
     <div className="max-w-6xl mx-auto space-y-10 pb-20 animate-in fade-in duration-500">
       <div>
         <h2 className="text-[3.5rem] font-black text-primary tracking-tighter uppercase leading-none">New Reservation</h2>
-        <p className="text-[11px] font-black text-muted-foreground mt-2 uppercase tracking-[0.4em]">Infrastructure Authorization Hub</p>
+        <p className="text-[11px] font-black text-muted-foreground mt-2 uppercase tracking-[0.4em]">Infrastructure Authorization</p>
       </div>
 
-      <div className="bg-white rounded-[3rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border-none p-12 md:p-20 relative overflow-hidden">
+      <div className="bg-white rounded-[3rem] shadow-2xl border-none p-12 md:p-20 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12 pointer-events-none">
           <Zap size={200} fill="currentColor" className="text-primary" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-12 relative z-10">
           
-          {/* Protocol Mode Toggle */}
           <div className="space-y-4">
             <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-primary ml-1">Protocol Mode</Label>
             <div className="grid grid-cols-2 gap-4">
@@ -165,21 +157,6 @@ export default function MakeRequest() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Academic Load</Label>
-              <select
-                value={formData.subjectId}
-                onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-                className="w-full h-16 bg-muted/20 border-none rounded-2xl px-8 font-black text-sm uppercase tracking-tight focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all shadow-inner"
-                required
-              >
-                <option value="">-- SELECT SUBJECT --</option>
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Facility Type</Label>
               <div className="flex gap-10 h-16 items-center px-4">
                 {['lab', 'room'].map(t => (
@@ -196,26 +173,26 @@ export default function MakeRequest() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">{formData.type === 'lab' ? 'Laboratory Unit' : 'Lecture Unit'}</Label>
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Infrastructure Unit</Label>
               <select
                 value={formData.locationId}
                 onChange={(e) => setFormData({ ...formData, locationId: e.target.value, pcId: '' })}
                 className="w-full h-16 bg-muted/20 border-none rounded-2xl px-8 font-black text-sm uppercase tracking-tight focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all shadow-inner"
                 required
               >
-                <option value="">-- CHOOSE FACILITY --</option>
+                <option value="">-- CHOOSE UNIT --</option>
                 {(formData.type === 'lab' ? labs : rooms).map((loc) => (
                   <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()} (CAP: {loc.capacity})</option>
                 ))}
               </select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-1 transition-colors", formData.locationId ? "text-primary" : "text-muted-foreground/30")}>Workstation Assignment</Label>
+              <Label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-1 transition-colors", formData.locationId ? "text-primary" : "text-muted-foreground/30")}>Station Assignment</Label>
               <select
                 value={formData.pcId}
                 disabled={!formData.locationId || formData.type !== 'lab'}
@@ -226,42 +203,42 @@ export default function MakeRequest() {
                 )}
                 required={formData.type === 'lab'}
               >
-                <option value="">-- SELECT STATION --</option>
+                <option value="">-- SELECT PC UNIT --</option>
                 {availablePCs.map((pc) => (
                   <option key={pc.id} value={pc.id}>PC-{pc.pcNumber}</option>
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock In</Label>
-              <Input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock Out</Label>
-              <Input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock In</Label>
+                <Input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock Out</Label>
+                <Input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
+              </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Terminal Purpose</Label>
+            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Request Purpose</Label>
             <Textarea
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               className="rounded-[2.5rem] p-10 border-none bg-muted/10 min-h-[160px] font-bold text-lg focus:ring-2 focus:ring-primary/20 outline-none shadow-inner"
-              placeholder="State objective for session access..."
+              placeholder="State objective for session..."
             />
           </div>
 
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-24 bg-primary hover:bg-primary/90 text-white font-black uppercase text-base tracking-[0.4em] rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(109,27,10,0.4)] gap-5 transition-all active:scale-95 disabled:grayscale"
+            className="w-full h-24 bg-primary hover:bg-primary/90 text-white font-black uppercase text-base tracking-[0.4em] rounded-[1.5rem] shadow-xl gap-5 transition-all active:scale-95 disabled:grayscale"
           >
             {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <Send size={32} />}
-            TRANSMIT REGISTRY SIGNAL
+            TRANSMIT REQUEST SIGNAL
           </Button>
         </form>
       </div>
@@ -271,9 +248,9 @@ export default function MakeRequest() {
           <AlertCircle size={32} />
         </div>
         <div className="space-y-2">
-          <h4 className="font-black uppercase tracking-tight text-primary text-xl">Operational Protocol</h4>
+          <h4 className="font-black uppercase tracking-tight text-primary text-xl">System Notice</h4>
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-            Requests are monitored in real-time. Unauthorized station usage will trigger the terminal lock. Always check out via the sidebar terminal before the scheduled end time.
+            All workstation logins are recorded. Unauthorized usage will be reported to the IT Department.
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Lab, Pc, LabRequest, Attendance, Room, AuditLog, Subject } from '@/utils/storage';
+import { User, Lab, Pc, LabRequest, Attendance, Room, AuditLog } from '@/utils/storage';
 
 /**
  * LOCAL REGISTRY PROTOCOL
@@ -60,7 +60,6 @@ export async function updateLabAction(id: string, updates: Partial<Lab>) {
 export async function deleteLabAction(id: string) {
     const labs = getLocal<Lab>('labs');
     setLocal('labs', labs.filter(l => l.id !== id));
-    // Also remove associated PCs
     const pcs = getLocal<Pc>('pcs');
     setLocal('pcs', pcs.filter(p => p.labId !== id));
 }
@@ -105,20 +104,9 @@ export async function addAttendanceAction(att: Omit<Attendance, 'id'>) {
     const data = getLocal<Attendance>('attendance');
     setLocal('attendance', [{ ...att, id: `ATT-${Date.now()}` }, ...data]);
 }
-export async function updateAttendanceAction(id: string, updates: Partial<Attendance>) {
-    const data = getLocal<Attendance>('attendance');
-    setLocal('attendance', data.map(a => a.id === id ? { ...a, ...updates } : a));
-}
-
 export async function addAuditLogAction(log: Omit<AuditLog, 'id' | 'timestamp'>) {
     const data = getLocal<AuditLog>('auditlog');
     setLocal('auditlog', [{ ...log, id: `AUDIT-${Date.now()}`, timestamp: new Date().toISOString() }, ...data]);
-}
-
-export async function getSubjectsAction(): Promise<Subject[]> { return getLocal<Subject>('subjects'); }
-export async function addSubjectAction(subject: Subject) {
-    const data = getLocal<Subject>('subjects');
-    setLocal('subjects', [...data, subject]);
 }
 
 // SYSTEM
@@ -151,3 +139,5 @@ export async function updateLastSeenAction(id: string) {
     const users = getLocal<User>('users');
     setLocal('users', users.map(u => u.id === id ? { ...u, lastSeen: new Date().toISOString() } : u));
 }
+
+export async function getSubjectsAction() { return []; } // Legacy stub

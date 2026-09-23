@@ -13,7 +13,7 @@ import AllRequests from '@/components/admin/AllRequests';
 import MakeRequest from '@/components/student/MakeRequest';
 import ProfileView from '@/components/shared/ProfileView';
 import Image from 'next/image';
-import { Bell, HelpCircle, LogOut } from 'lucide-react';
+import { Bell, HelpCircle, LogOut, Loader2 } from 'lucide-react';
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -23,8 +23,8 @@ export default function App() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#1f363d]">
         <div className="animate-pulse flex flex-col items-center">
-            <div className="h-12 w-12 bg-orange-500 rounded-xl mb-4" />
-            <p className="text-white/20 font-black text-xs uppercase tracking-widest">Warp Drive Initializing...</p>
+            <Loader2 className="h-12 w-12 text-orange-500 animate-spin mb-4" />
+            <p className="text-white/20 font-black text-xs uppercase tracking-widest">Registry Syncing...</p>
         </div>
       </div>
     );
@@ -62,8 +62,8 @@ export default function App() {
           <Image 
             src="/logo.png" 
             alt="AMA Student Portal" 
-            width={320} 
-            height={80} 
+            width={380} 
+            height={90} 
             className="h-20 w-auto object-contain"
             priority
           />
@@ -71,17 +71,17 @@ export default function App() {
         
         <div className="flex items-center gap-8">
           <button className="text-white/70 hover:text-white transition-colors">
-            <Bell size={28} />
+            <Bell size={32} />
           </button>
           <button className="hidden md:flex items-center gap-3 bg-[#f07148] hover:bg-[#d95d3a] text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all active:scale-95">
-            <HelpCircle size={22} />
+            <HelpCircle size={24} />
             Tutorial
           </button>
           <button 
             onClick={logout}
             className="text-white/70 hover:text-white transition-colors p-2"
           >
-            <LogOut size={32} />
+            <LogOut size={36} />
           </button>
         </div>
       </header>

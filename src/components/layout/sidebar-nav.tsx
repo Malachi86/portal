@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Home, FileText, Monitor, LogOut, UserCircle, PlusCircle, ShieldCheck, Zap } from 'lucide-react';
+import { Home, FileText, Monitor, LogOut, UserCircle, PlusCircle, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import SessionTerminal from '../student/SessionTerminal';
 
 export function SidebarNav({ currentView, onNavigate }: { currentView: string, onNavigate: (v: string) => void }) {
   const { user, logout } = useAuth();
@@ -36,8 +35,6 @@ export function SidebarNav({ currentView, onNavigate }: { currentView: string, o
 
       {/* Navigation Menu */}
       <nav className="flex-1 space-y-4 relative z-10">
-        {user?.role === 'student' && <SessionTerminal />}
-        
         <div className="space-y-2">
             <p className="text-[9px] font-black uppercase text-white/20 tracking-[0.3em] mb-4 ml-2">Primary Protocol</p>
             {menuItems.map((item) => (
@@ -45,7 +42,7 @@ export function SidebarNav({ currentView, onNavigate }: { currentView: string, o
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                "w-full flex items-center gap-6 px-7 py-6 rounded-[1.5rem] transition-all text-xs font-black uppercase tracking-[0.2em] text-left active:scale-95 group",
+                "w-full flex items-center gap-6 px-7 py-6 rounded-[1.5rem] transition-all text-sm font-black uppercase tracking-[0.2em] text-left active:scale-95 group",
                 currentView === item.id 
                     ? "bg-orange-500 text-white shadow-[0_20px_40px_rgba(249,115,22,0.3)] scale-105" 
                     : "text-white/40 hover:bg-white/5 hover:text-white"
@@ -93,4 +90,3 @@ export function SidebarNav({ currentView, onNavigate }: { currentView: string, o
     </div>
   );
 }
-

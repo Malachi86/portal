@@ -3,91 +3,86 @@
   "entities": {
     "User": {
       "title": "User Profile",
-      "description": "Unified user profile for students, teachers, and admins.",
+      "description": "Information about a student, teacher, or admin.",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "fullName": { "type": "string" },
-        "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
-        "identifier": { "type": "string", "description": "USN for students, EMP for teachers, username for admin" },
-        "course": { "type": "string" },
-        "term": { "type": "string" },
-        "position": { "type": "string" },
-        "mpm": { "type": "string" },
-        "activeSessionId": { "type": "string" },
-        "createdAt": { "type": "string" }
-      },
-      "required": ["uid", "fullName", "email", "role", "identifier"]
-    },
-    "Laboratory": {
-      "title": "Laboratory Room",
-      "description": "Represents a physical computer laboratory room.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
+        "usn_emp": { "type": "string" },
         "name": { "type": "string" },
-        "capacity": { "type": "number" },
-        "status": { "type": "string", "enum": ["Active", "Maintenance", "Disabled"] },
-        "currentHandler": { "type": "string", "description": "Teacher UID currently managing the room" }
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "teacher", "student", "library_admin", "guard", "ssc_adviser", "ssc_treasurer"] },
+        "department": { "type": "string", "enum": ["college", "shs"] },
+        "profilePic": { "type": "string" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "isBanned": { "type": "boolean" },
+        "deviceFingerprint": { "type": "string", "description": "The registered ID of the device used by this user." }
       },
-      "required": ["id", "name", "capacity", "status"]
+      "required": ["usn_emp", "name", "email", "role"]
     },
-    "PCState": {
-      "title": "PC Node State",
-      "description": "Real-time state and assignment of an individual PC.",
-      "type": "object",
-      "properties": {
-        "pcNumber": { "type": "string" },
-        "labId": { "type": "string" },
-        "status": { "type": "string", "enum": ["Available", "Occupied", "Pending", "Maintenance"] },
-        "currentUserId": { "type": "string" },
-        "currentUserName": { "type": "string" },
-        "sessionExpiresAt": { "type": "string" },
-        "requestId": { "type": "string" }
-      },
-      "required": ["pcNumber", "labId", "status"]
-    },
-    "UserSessionRequest": {
-      "title": "PC Booking Request",
-      "description": "Request submitted by students/teachers for PC usage.",
+    "Device": {
+      "title": "Registered Device",
+      "description": "Records of devices that have visited the application.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userRole": { "type": "string" },
-        "labId": { "type": "string" },
-        "labName": { "type": "string" },
-        "pcNumber": { "type": "string" },
-        "durationMinutes": { "type": "number" },
-        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Cancelled", "Expired"] },
-        "createdAt": { "type": "string" },
-        "approvedAt": { "type": "string" },
-        "expiresAt": { "type": "string" }
+        "firstVisit": { "type": "string", "format": "date-time" },
+        "lastVisit": { "type": "string", "format": "date-time" },
+        "userAgent": { "type": "string" },
+        "ipHint": { "type": "string" },
+        "isBanned": { "type": "boolean" },
+        "violationCount": { "type": "number" },
+        "associatedUser": { "type": "string" }
       },
-      "required": ["id", "userId", "labId", "pcNumber", "status"]
+      "required": ["id", "firstVisit", "lastVisit"]
+    },
+    "BannedDevice": {
+      "title": "Banned Device",
+      "description": "Blacklisted device IDs that are blocked from all operations.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceId", "timestamp"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "termId": { "type": "string" }
+      }
+    },
+    "SSCPayment": {
+      "title": "SSC Payment",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+      }
     }
   },
   "auth": {
     "providers": ["password"]
   },
   "firestore": {
-    "/users/{uid}": {
+    "/users/{userId}": {
       "schema": "User",
-      "description": "User profiles including students, teachers, and admins."
+      "description": "User profiles."
     },
-    "/laboratories/{labId}": {
-      "schema": "Laboratory",
-      "description": "Collection of physical laboratories."
+    "/devices/{deviceId}": {
+      "schema": "Device",
+      "description": "Registry of visiting devices."
     },
-    "/laboratories/{labId}/pcs/{pcId}": {
-      "schema": "PCState",
-      "description": "Subcollection storing real-time statuses for every PC."
+    "/banned_devices/{deviceId}": {
+      "schema": "BannedDevice",
+      "description": "Blacklist for malicious devices."
     },
-    "/requests/{requestId}": {
-      "schema": "UserSessionRequest",
-      "description": "Global collection for session requests and history."
+    "/sscpayments/{payId}": {
+      "schema": "SSCPayment",
+      "description": "SSC validation records."
     }
   }
 }

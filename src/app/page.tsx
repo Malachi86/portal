@@ -1,31 +1,36 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginPage from '@/components/auth/LoginPage';
+import TeacherDashboard from '@/components/teacher/TeacherDashboard';
+import StudentDashboard from '@/components/student/StudentDashboard';
+import AdminDashboard from '@/components/admin/AdminDashboard';
 import { Loader2 } from 'lucide-react';
 
-export default function RootPage() {
-  const { user, loading } = useUser();
-  const router = useRouter();
+export default function App() {
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push('/dashboard');
-      } else {
-        router.push('/login');
-      }
-    }
-  }, [user, loading, router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-10 w-10 text-primary animate-spin" />
-        <p className="text-lg font-bold tracking-widest text-primary uppercase">Initializing Nexus Engine...</p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-primary h-12 w-12" />
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  switch (user.role) {
+    case 'admin':
+      return <AdminDashboard />;
+    case 'teacher':
+      return <TeacherDashboard />;
+    case 'student':
+      return <StudentDashboard />;
+    default:
+      return <LoginPage />;
+  }
 }

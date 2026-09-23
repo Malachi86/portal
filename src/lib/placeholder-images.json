@@ -1,16 +1,3 @@
 {
-  "placeholderImages": [
-    {
-      "id": "kiosk-bg",
-      "description": "Tech laboratory background for kiosk mode",
-      "imageUrl": "https://picsum.photos/seed/tech/1920/1080",
-      "imageHint": "server room technology"
-    },
-    {
-      "id": "hero-learning",
-      "description": "Student learning online with a laptop",
-      "imageUrl": "https://picsum.photos/seed/learn/1200/600",
-      "imageHint": "online learning"
-    }
-  ]
+  "placeholderImages": []
 }

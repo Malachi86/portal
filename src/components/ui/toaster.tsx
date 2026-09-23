@@ -15,20 +15,38 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
+      {toasts.map(({ id, title, description, action, ...props }) => (
+        <Toast key={id} {...props}>
+          <div className="flex w-full items-start justify-between gap-4">
+            
+            {/* Toast Content */}
             <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {title && (
+                <ToastTitle className="text-sm font-semibold">
+                  {title}
+                </ToastTitle>
+              )}
+
               {description && (
-                <ToastDescription>{description}</ToastDescription>
+                <ToastDescription className="text-sm opacity-90">
+                  {description}
+                </ToastDescription>
               )}
             </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
+
+            {/* Action Button */}
+            {action && (
+              <div className="shrink-0">
+                {action}
+              </div>
+            )}
+          </div>
+
+          {/* Close Button */}
+          <ToastClose />
+        </Toast>
+      ))}
+
       <ToastViewport />
     </ToastProvider>
   )

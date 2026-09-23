@@ -2,11 +2,10 @@
 'use client';
 
 import './globals.css';
-import { initializeFirebase, FirebaseClientProvider } from '@/firebase';
-import { FullscreenLock } from '@/components/fullscreen-lock';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
-
-const { firebaseApp, firestore, auth } = initializeFirebase();
+import { FullscreenLock } from '@/components/fullscreen-lock';
+import { useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -18,15 +17,15 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background selection:bg-accent/30 selection:text-accent-foreground">
-        <FirebaseClientProvider firebaseApp={firebaseApp} firestore={firestore} auth={auth}>
+      <body className="font-sans antialiased bg-[#f4f7f8]">
+        <AuthProvider>
           <FullscreenLock>
             {children}
           </FullscreenLock>
           <Toaster />
-        </FirebaseClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,4 +1,1 @@
-import { config } from 'dotenv';
-config();
-
-import '@/ai/flows/instructor-generates-quiz-questions.ts';
+// AI logic removed during migration to deterministic system.

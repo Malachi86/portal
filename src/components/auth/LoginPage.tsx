@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,9 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { login as loginAction } from '@/app/actions/authActions'; 
-import { banDeviceAction } from '@/app/actions/dbActions';
-import { getDeviceFingerprint, recordMaliciousAttempt, isAttackPatternDetected } from '@/utils/device';
-import { ArrowRight, Lock, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Lock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -29,32 +26,14 @@ export default function LoginPage() {
       
       if (result.success && result.user) {
         const user = result.user as any; 
-
-        if (user.role === 'student' && user.isApproved === false) {
-          toast.error('ACCESS DENIED', {
-            description: 'Your account is pending admin approval. Please contact the registrar.',
-            icon: <Lock className="h-4 w-4" />
-          });
-          setLoading(false);
-          return;
-        }
-
         login(user); 
-        toast.success(`Welcome back, ${user.name}!`);
+        toast.success(`Access Granted: Welcome, ${user.name}`);
       } else {
-        // Record failed attempt for security
-        recordMaliciousAttempt();
-        if (isAttackPatternDetected()) {
-            const deviceId = getDeviceFingerprint();
-            await banDeviceAction(deviceId, "Excessive Failed Login Attempts");
-            window.location.reload();
-            return;
-        }
-        toast.error(result.message || 'Invalid ID or password');
+        toast.error(result.message || 'Identity verification failed.');
       }
     } catch (error) {
       console.error(error); 
-      toast.error('An error occurred during login');
+      toast.error('System Authentication Error');
     }
 
     setLoading(false);
@@ -69,67 +48,52 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-grow flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-          
+        <div className="w-full max-w-4xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
           <div className="w-full md:w-2/5 bg-primary text-white p-12 flex flex-col justify-center items-start">
-            <h1 className="text-4xl font-bold mb-4 uppercase">WELCOME TO STUDENT PORTAL</h1>
-            <p className="text-white/80 leading-relaxed italic">
-              "A wise man will hear, and will increase learning; and a man of understanding shall attain unto wise counsels."
-            </p>
-            <div className="mt-12 p-4 bg-white/10 rounded-xl border border-white/20">
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/50">Secure Terminal</p>
-                <p className="text-[10px] font-mono text-white/40 mt-1 break-all">{getDeviceFingerprint()}</p>
-            </div>
+            <h1 className="text-4xl font-black mb-4 uppercase tracking-tighter">AUTHENTICATION</h1>
+            <p className="text-white/80 leading-relaxed font-bold">Secure access to AMA Student infrastructure. Use your USN or Employee ID to continue.</p>
           </div>
 
           <div className="w-full md:w-3/5 p-12">
-            <h2 className="text-2xl font-bold mb-2">Welcome Back</h2>
-            <p className="text-muted-foreground mb-8">Please sign in to continue</p>
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Welcome Back</h2>
+            <p className="text-muted-foreground font-bold text-xs uppercase tracking-widest mb-8">Registry Handshake Required</p>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="id">Universal ID (USN/EMP)</Label>
+                <Label htmlFor="id" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Universal ID (USN/EMP)</Label>
                 <Input
                   id="id"
                   type="text"
                   value={id}
                   onChange={(e) => setId(e.target.value)}
                   required
-                  className="h-14 rounded-xl font-bold text-lg px-6"
+                  className="h-14 rounded-2xl font-bold text-lg px-6 border-primary/10"
                   placeholder="ID Number"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password"  className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Access Key</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-14 rounded-xl px-6"
+                  className="h-14 rounded-2xl px-6 border-primary/10"
                   placeholder="••••••••"
                 />
-                <div className="text-right pt-1">
-                  <Link href="/forgot-password" className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">
-                    Forgot password?
-                  </Link>
-                </div>
               </div>
               <Button 
                 type="submit" 
-                className="w-full h-14 text-sm font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 rounded-2xl gap-2 transition-all active:scale-95" 
+                className="w-full h-16 text-sm font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 rounded-2xl gap-3 transition-all active:scale-95" 
                 disabled={loading}
               >
-                {loading ? 'AUTHENTICATING...' : 'Sign In'}
+                {loading ? 'VERIFYING...' : 'SECURE SIGN IN'}
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </form>
             <div className="text-center mt-8">
-              <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="font-black text-primary hover:underline uppercase tracking-widest ml-1">
-                  Sign up now
-                </Link>
+              <p className="text-sm font-bold text-muted-foreground">
+                Don't have an account? <Link href="/register" className="font-black text-primary hover:underline">Register Identity</Link>
               </p>
             </div>
           </div>

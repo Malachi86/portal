@@ -22,49 +22,61 @@ export function SidebarNav({ currentView, onNavigate }: { currentView: string, o
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#1f363d] text-white w-64 p-6 shrink-0 border-r border-white/5">
-      <div className="mb-10 px-2">
-        <h1 className="text-xl font-black tracking-tighter text-orange-500 uppercase leading-none">AMA PORTAL</h1>
-        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-1">Infrastructure Control</p>
+    <div className="flex flex-col h-full bg-[#1f363d] text-white w-80 p-8 shrink-0 border-r border-white/5 shadow-2xl">
+      {/* Sidebar Header */}
+      <div className="mb-14 px-2">
+        <h1 className="text-3xl font-black tracking-tighter text-orange-500 uppercase leading-none">AMA PORTAL</h1>
+        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mt-2">Infrastructure Control</p>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      {/* Navigation Menu */}
+      <nav className="flex-1 space-y-3">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
             className={cn(
-              "w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all text-xs font-black uppercase tracking-widest text-left",
-              currentView === item.id ? "bg-orange-500 text-white shadow-lg" : "text-white/40 hover:bg-white/5 hover:text-white"
+              "w-full flex items-center gap-5 px-6 py-5 rounded-2xl transition-all text-sm font-black uppercase tracking-widest text-left active:scale-95",
+              currentView === item.id 
+                ? "bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.3)] scale-105" 
+                : "text-white/40 hover:bg-white/5 hover:text-white"
             )}
           >
-            <item.icon size={18} />
+            <item.icon size={24} strokeWidth={3} className={cn(currentView === item.id ? "text-white" : "opacity-40")} />
             {item.label}
           </button>
         ))}
       </nav>
 
-      <div className="pt-6 border-t border-white/5 space-y-4">
+      {/* Bottom Identity & Sign Out */}
+      <div className="pt-8 border-t border-white/10 space-y-6">
         <button 
           onClick={() => onNavigate('profile')}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group",
+            "w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all group active:scale-95",
             currentView === 'profile' ? "bg-white/10" : "hover:bg-white/5"
           )}
         >
-          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/10">
-            <UserCircle size={24} />
+          <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary border-2 border-primary/20 shadow-inner group-hover:border-primary/40 transition-colors">
+            {user?.profilePic ? (
+              <img src={user.profilePic} alt="avatar" className="w-full h-full object-cover rounded-2xl" />
+            ) : (
+              <UserCircle size={32} strokeWidth={2} />
+            )}
           </div>
-          <div className="overflow-hidden text-left">
-            <p className="text-[10px] font-black truncate uppercase text-white">{user?.name || 'Identity'}</p>
-            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{user?.role || 'Guest'}</p>
+          <div className="overflow-hidden text-left space-y-0.5">
+            <p className="text-xs font-black truncate uppercase text-white tracking-tight">{user?.name || 'Identity'}</p>
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{user?.role || 'Guest'}</p>
           </div>
         </button>
+
         <button 
           onClick={logout}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all text-xs font-black uppercase tracking-widest"
+          className="w-full flex items-center gap-5 px-6 py-5 rounded-2xl text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all text-xs font-black uppercase tracking-widest active:scale-95"
         >
-          <LogOut size={18} />
+          <div className="h-10 w-10 rounded-full bg-black/40 flex items-center justify-center border border-white/5">
+            <LogOut size={20} strokeWidth={3} />
+          </div>
           Sign Out
         </button>
       </div>

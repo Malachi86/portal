@@ -87,9 +87,13 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar Navigation - Fixed width w-80 */}
         <SidebarNav currentView={currentView} onNavigate={setCurrentView} />
-        <main className="flex-1 overflow-y-auto p-6 md:p-10">
-          {renderContent()}
+        
+        <main className="flex-1 overflow-y-auto p-6 md:p-14">
+          <div className="max-w-[1400px] mx-auto">
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>

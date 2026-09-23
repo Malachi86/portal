@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, CheckCircle, PlayCircle, FileText, Lock, ChevronRight, GraduationCap } from 'lucide-react';
+import { BookOpen, CheckCircle, PlayCircle, FileText, Lock, ChevronRight, GraduationCap, Sparkles } from 'lucide-react';
 
 export default async function CourseDetailPage({ params }: { params: { id: string } }) {
   const { id } = await params;
   
-  // Simulated data
   const course = {
     id: 1,
     title: 'Introduction to React.js',
@@ -53,7 +52,6 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="grid gap-8 lg:grid-cols-3">
-        {/* Left: Course Info */}
         <div className="lg:col-span-2 space-y-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -114,7 +112,6 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
           </div>
         </div>
 
-        {/* Right: Sticky Enrollment Sidebar */}
         <div className="lg:col-span-1">
           <Card className="sticky top-24 border-none shadow-lg overflow-hidden bg-white">
             <div className="relative aspect-video">
@@ -157,11 +154,11 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
                 </p>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/20 flex flex-col gap-2 border-t pt-4">
+            <div className="bg-muted/20 flex flex-col gap-2 border-t p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground w-full">
                 <GraduationCap className="h-4 w-4" /> Includes Certificate of Completion
               </div>
-            </CardFooter>
+            </div>
           </Card>
         </div>
       </div>
@@ -169,7 +166,6 @@ export default async function CourseDetailPage({ params }: { params: { id: strin
   );
 }
 
-// Minimal Avatar components for this page
 function Avatar({ children, className }: { children: React.ReactNode, className?: string }) {
   return <div className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}>{children}</div>;
 }

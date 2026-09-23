@@ -1,34 +1,56 @@
+
 {
   "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Unified user profile for students, teachers, and admins.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
+        "identifier": { "type": "string", "description": "USN for students, EMP for teachers, username for admin" },
+        "course": { "type": "string" },
+        "term": { "type": "string" },
+        "position": { "type": "string" },
+        "mpm": { "type": "string" },
+        "activeSessionId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "email", "role", "identifier"]
+    },
     "Laboratory": {
       "title": "Laboratory Room",
-      "description": "Represents a physical computer laboratory room with specific PC capacity.",
+      "description": "Represents a physical computer laboratory room.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "capacity": { "type": "number" },
-        "status": { "type": "string", "enum": ["Active", "Maintenance", "Disabled"] }
+        "status": { "type": "string", "enum": ["Active", "Maintenance", "Disabled"] },
+        "currentHandler": { "type": "string", "description": "Teacher UID currently managing the room" }
       },
       "required": ["id", "name", "capacity", "status"]
     },
     "PCState": {
       "title": "PC Node State",
-      "description": "Real-time state and assignment of an individual PC inside a laboratory.",
+      "description": "Real-time state and assignment of an individual PC.",
       "type": "object",
       "properties": {
         "pcNumber": { "type": "string" },
         "labId": { "type": "string" },
         "status": { "type": "string", "enum": ["Available", "Occupied", "Pending", "Maintenance"] },
-        "currentUser": { "type": "string" },
+        "currentUserId": { "type": "string" },
         "currentUserName": { "type": "string" },
-        "sessionExpiresAt": { "type": "string" }
+        "sessionExpiresAt": { "type": "string" },
+        "requestId": { "type": "string" }
       },
       "required": ["pcNumber", "labId", "status"]
     },
     "UserSessionRequest": {
       "title": "PC Booking Request",
-      "description": "Log of requests submitted by students or approved by teachers/admins.",
+      "description": "Request submitted by students/teachers for PC usage.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -41,7 +63,8 @@
         "durationMinutes": { "type": "number" },
         "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Cancelled", "Expired"] },
         "createdAt": { "type": "string" },
-        "approvedAt": { "type": "string" }
+        "approvedAt": { "type": "string" },
+        "expiresAt": { "type": "string" }
       },
       "required": ["id", "userId", "labId", "pcNumber", "status"]
     }
@@ -50,17 +73,21 @@
     "providers": ["password"]
   },
   "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles including students, teachers, and admins."
+    },
     "/laboratories/{labId}": {
       "schema": "Laboratory",
-      "description": "Collection of physical laboratories managed by the academy."
+      "description": "Collection of physical laboratories."
     },
     "/laboratories/{labId}/pcs/{pcId}": {
       "schema": "PCState",
-      "description": "Subcollection storing real-time statuses for every workstation grid node."
+      "description": "Subcollection storing real-time statuses for every PC."
     },
     "/requests/{requestId}": {
       "schema": "UserSessionRequest",
-      "description": "Global collection for session requests, warning timers, and history logs."
+      "description": "Global collection for session requests and history."
     }
   }
 }

@@ -9,10 +9,12 @@ import {
   GraduationCap, 
   Users, 
   PenTool, 
-  Menu,
-  ChevronRight,
   LogOut,
-  Sparkles
+  Sparkles,
+  History,
+  ShieldCheck,
+  Bell,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,65 +30,74 @@ import {
   SidebarMenuButton, 
   SidebarMenuItem, 
   SidebarProvider,
-  SidebarTrigger,
   SidebarInset
 } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { data: userData } = useDoc(user && firestore ? doc(firestore, 'users', user.uid) : null);
 
   const menuItems = [
-    { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { title: 'All Courses', icon: BookOpen, href: '/courses' },
-    { title: 'My Progress', icon: GraduationCap, href: '/dashboard/progress' },
-  ];
-
-  const instructorItems = [
-    { title: 'My Courses', icon: PenTool, href: '/instructor/courses' },
-    { title: 'Quiz Generator', icon: Sparkles, href: '/instructor/quizzes/generate' },
-    { title: 'Students', icon: Users, href: '/instructor/students' },
+    { title: 'Term management', icon: GraduationCap, href: '/admin/terms' },
+    { title: 'Manage users', icon: Users, href: '/admin/users' },
+    { title: 'Campus Registry', icon: ShieldCheck, href: '/admin/registry' },
+    { title: 'All requests', icon: History, href: '/admin' },
+    { title: 'Attendance reports', icon: BookOpen, href: '/admin/reports' },
+    { title: 'Audit log', icon: History, href: '/admin/logs' },
+    { title: 'System settings', icon: Settings, href: '/admin/settings' },
   ];
 
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <Sidebar className="border-r shadow-sm">
-          <SidebarHeader className="border-b h-16 flex items-center px-4 bg-white/50">
-            <Link href="/" className="flex items-center gap-2">
-              <GraduationCap className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg text-primary tracking-tight">Siklab Academy</span>
+        <Sidebar className="border-none sidebar-gradient text-white">
+          <SidebarHeader className="h-24 flex flex-col justify-center px-8">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="bg-white/10 p-2 rounded-xl border border-white/20">
+                <GraduationCap className="h-6 w-6 text-accent" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-lg tracking-tighter leading-none">AMA</span>
+                <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Student Portal</span>
+              </div>
             </Link>
           </SidebarHeader>
-          <SidebarContent className="bg-white/30">
-            <SidebarGroup>
-              <SidebarGroupLabel>Learning</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={pathname === item.href}>
-                        <Link href={item.href} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+
+          <SidebarContent className="px-4 py-8">
+            <div className="flex flex-col items-center gap-4 mb-12">
+              <div className="relative p-1 rounded-3xl border-2 border-accent">
+                <Avatar className="h-24 w-24 rounded-[1.5rem] bg-accent flex items-center justify-center">
+                  <span className="text-4xl font-black text-white">{userData?.fullName?.[0] || 'S'}</span>
+                </Avatar>
+              </div>
+              <div className="text-center">
+                <h3 className="font-black text-accent tracking-tighter text-lg uppercase">{userData?.fullName || 'SYSTEM ADMINISTRATOR'}</h3>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{userData?.role || 'ADMIN'}</p>
+              </div>
+            </div>
 
             <SidebarGroup>
-              <SidebarGroupLabel>Instructor tools</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {instructorItems.map((item) => (
+                <SidebarMenu className="gap-2">
+                  {menuItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={pathname === item.href}>
-                        <Link href={item.href} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={pathname === item.href}
+                        className={`h-14 rounded-2xl px-6 transition-all duration-300 ${
+                          pathname === item.href 
+                            ? 'bg-white/10 text-accent font-black shadow-lg' 
+                            : 'text-white/50 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <Link href={item.href} className="flex items-center gap-4">
+                          <item.icon className={`h-5 w-5 ${pathname === item.href ? 'text-accent' : ''}`} />
+                          <span className="text-sm font-bold uppercase tracking-wide">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -95,55 +106,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter className="border-t p-4 bg-white/50">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar className="h-9 w-9 border-2 border-primary/20">
-                <AvatarImage src="https://picsum.photos/seed/user/100/100" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">Jane Doe</span>
-                <span className="text-xs text-muted-foreground">Student</span>
+
+          <SidebarFooter className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                <span className="text-xs font-black text-white/20">N</span>
               </div>
             </div>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/settings" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="flex flex-col h-full overflow-auto">
-          <header className="h-16 border-b flex items-center justify-between px-6 bg-white sticky top-0 z-40">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <div className="h-4 w-[1px] bg-border hidden sm:block" />
-              <h1 className="text-lg font-semibold truncate">
-                {pathname === '/dashboard' ? 'Overview' : 
-                 pathname.includes('/courses') ? 'Courses' :
-                 pathname.includes('/instructor') ? 'Instructor Portal' : 'Siklab Academy'}
-              </h1>
+        <SidebarInset className="flex flex-col h-full overflow-auto bg-background">
+          <header className="h-24 flex items-center justify-between px-10 header-ama sticky top-0 z-40 text-white shadow-2xl">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                 <div className="h-12 w-12 bg-white/20 rounded-2xl flex items-center justify-center border border-white/30">
+                    <GraduationCap className="h-7 w-7" />
+                 </div>
+                 <div className="flex flex-col">
+                    <span className="font-black text-2xl tracking-tighter leading-none italic">AMA</span>
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Student Portal</span>
+                 </div>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="relative">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-accent rounded-full animate-pulse" />
+            
+            <div className="flex items-center gap-6">
+              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-white/10 text-white/80">
+                <Bell className="h-6 w-6" />
+              </Button>
+              <Button className="h-12 px-6 rounded-2xl bg-accent hover:bg-accent/90 text-white font-black gap-2 shadow-lg">
+                <HelpCircle className="h-5 w-5" /> TUTORIAL
+              </Button>
+              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-white/10 text-white/80">
+                <LogOut className="h-6 w-6" />
               </Button>
             </div>
           </header>
-          <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
+
+          <main className="flex-1 p-10 max-w-[1600px] mx-auto w-full">
             {children}
           </main>
           <Toaster />

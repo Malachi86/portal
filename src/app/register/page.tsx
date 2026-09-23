@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GraduationCap, IdentificationCard, User, Lock, Loader2, Phone, BookOpen, UserCircle } from 'lucide-react';
+import { GraduationCap, IdCard, User, Lock, Loader2, Phone, BookOpen, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,7 +40,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Standardize authentication email from the direct USN or Employee ID string
     const systemEmail = `${identifier}@nexus.local`;
 
     try {
@@ -90,7 +89,7 @@ export default function RegisterPage() {
           <Tabs defaultValue="student" onValueChange={(v) => setRole(v as any)}>
             <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-slate-100 p-1 rounded-xl">
               <TabsTrigger value="student" className="gap-2 text-sm font-bold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                <IdentificationCard className="h-4 w-4" /> Student Profile
+                <IdCard className="h-4 w-4" /> Student Profile
               </TabsTrigger>
               <TabsTrigger value="teacher" className="gap-2 text-sm font-bold rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                 <UserCircle className="h-4 w-4" /> Teacher / Faculty

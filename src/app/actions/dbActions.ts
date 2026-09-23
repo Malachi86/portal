@@ -4,7 +4,7 @@ import { User, Lab, Pc, LabRequest, Attendance, Room, AuditLog, Subject } from '
 
 /**
  * LOCAL REGISTRY PROTOCOL
- * All database operations are now routed through LocalStorage for zero-dependency execution.
+ * Pure LocalStorage implementation for zero-dependency terminal execution.
  */
 
 function getLocal<T>(key: string): T[] {
@@ -51,15 +51,34 @@ export async function addLabAction(lab: Lab) {
     }));
     setLocal('pcs', [...pcs, ...newPcs]);
 }
+
 export async function updateLabAction(id: string, updates: Partial<Lab>) {
     const labs = getLocal<Lab>('labs');
     setLocal('labs', labs.map(l => l.id === id ? { ...l, ...updates } : l));
+}
+
+export async function deleteLabAction(id: string) {
+    const labs = getLocal<Lab>('labs');
+    setLocal('labs', labs.filter(l => l.id !== id));
+    // Also remove associated PCs
+    const pcs = getLocal<Pc>('pcs');
+    setLocal('pcs', pcs.filter(p => p.labId !== id));
 }
 
 export async function getRoomsAction(): Promise<Room[]> { return getLocal<Room>('rooms'); }
 export async function addRoomAction(room: Room) {
     const rooms = getLocal<Room>('rooms');
     setLocal('rooms', [...rooms, room]);
+}
+
+export async function updateRoomAction(id: string, updates: Partial<Room>) {
+    const rooms = getLocal<Room>('rooms');
+    setLocal('rooms', rooms.map(r => r.id === id ? { ...r, ...updates } : r));
+}
+
+export async function deleteRoomAction(id: string) {
+    const rooms = getLocal<Room>('rooms');
+    setLocal('rooms', rooms.filter(r => r.id !== id));
 }
 
 export async function getPcsAction(): Promise<Pc[]> { return getLocal<Pc>('pcs'); }
@@ -97,6 +116,10 @@ export async function addAuditLogAction(log: Omit<AuditLog, 'id' | 'timestamp'>)
 }
 
 export async function getSubjectsAction(): Promise<Subject[]> { return getLocal<Subject>('subjects'); }
+export async function addSubjectAction(subject: Subject) {
+    const data = getLocal<Subject>('subjects');
+    setLocal('subjects', [...data, subject]);
+}
 
 // SYSTEM
 export async function cleanupExpiredSessionsAction() {
@@ -116,10 +139,12 @@ export async function forceResetAllLabsAction() {
 }
 
 export async function updateSettingsAction(updates: any) {
+    if (typeof window === 'undefined') return;
     const settings = JSON.parse(localStorage.getItem('vault_settings') || '{}');
     localStorage.setItem('vault_settings', JSON.stringify({ ...settings, ...updates }));
 }
 export async function getSettingsAction() {
+    if (typeof window === 'undefined') return {};
     return JSON.parse(localStorage.getItem('vault_settings') || '{}');
 }
 export async function updateLastSeenAction(id: string) {

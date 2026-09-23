@@ -1,11 +1,12 @@
+
 'use server';
 
-import db from '@/lib/db';
+import { users } from '@/lib/db';
 import { User } from '@/utils/storage';
 
 /**
- * SERVER AUTH PROTOCOL
- * Secure SQLite-based authentication for Nexus Engine.
+ * SERVER AUTH PROTOCOL (JSON DB)
+ * Secure authentication for Nexus Engine workstations.
  */
 
 export async function login(id: string, pass: string) {
@@ -21,7 +22,7 @@ export async function login(id: string, pass: string) {
             };
         }
 
-        const user = db.prepare('SELECT * FROM users WHERE id = ? AND password = ?').get(cleanId, cleanPass) as any;
+        const user = users.find(u => u.id === cleanId && u.password === cleanPass);
 
         if (!user) {
             return { success: false, message: 'Invalid credentials.' };
@@ -50,16 +51,16 @@ export async function login(id: string, pass: string) {
 }
 
 export async function verifyIdentityAction(id: string, email: string) {
-    const user = db.prepare('SELECT * FROM users WHERE id = ? AND email = ?').get(id, email);
+    const user = users.find(u => u.id === id && u.email === email);
     if (user) return { success: true };
     return { success: false, message: 'Identity could not be verified in the registry.' };
 }
 
 export async function updatePasswordAction(id: string, newPass: string) {
     try {
-        db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newPass, id);
+        users.update(id, { password: newPass });
         return { success: true };
     } catch (e) {
-        return { success: false, message: 'Database update failed.' };
+        return { success: false, message: 'Registry update failed.' };
     }
 }

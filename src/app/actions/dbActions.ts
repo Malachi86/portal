@@ -1,250 +1,183 @@
+
 'use server';
 
-import db from '@/lib/db';
+import { users, labs, rooms, pcs, labrequests, attendance, auditlog, settings } from '@/lib/db';
 import { User, Lab, Pc, LabRequest, Attendance, Room, AuditLog } from '@/utils/storage';
 import { revalidatePath } from 'next/cache';
 
 /**
- * SERVER REGISTRY PROTOCOL
- * SQLite implementation for persistent workstation management.
+ * SERVER REGISTRY PROTOCOL (JSON DB)
+ * Clean JS implementation for Nexus Engine.
  */
 
 // USER ACTIONS
 export async function getUsersAction(): Promise<User[]> {
-    const rows = db.prepare('SELECT * FROM users').all();
-    return rows.map((u: any) => ({
-        ...u,
-        isApproved: Boolean(u.isApproved),
-        isBanned: Boolean(u.isBanned)
-    }));
+    return users.all();
 }
 
 export async function getUserByIdAction(id: string): Promise<User | null> {
-    const row = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
-    if (!row) return null;
-    return {
-        ...row,
-        isApproved: Boolean(row.isApproved),
-        isBanned: Boolean(row.isBanned)
-    };
+    return users.get(id) || null;
 }
 
 export async function addUserAction(user: User) {
-    const stmt = db.prepare(`
-        INSERT INTO users (id, name, email, password, role, department, profilePic, isApproved, isBanned)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-        user.id,
-        user.name,
-        user.email,
-        user.password,
-        user.role,
-        user.department,
-        user.profilePic || '',
-        user.isApproved ? 1 : 0,
-        user.isBanned ? 1 : 0
-    );
+    users.insert({
+        ...user,
+        isApproved: !!user.isApproved,
+        isBanned: !!user.isBanned
+    });
     revalidatePath('/');
 }
 
 export async function updateUserAction(id: string, updates: Partial<User>) {
-    const keys = Object.keys(updates);
-    if (keys.length === 0) return null;
-
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => {
-        const val = (updates as any)[key];
-        if (typeof val === 'boolean') return val ? 1 : 0;
-        return val;
-    });
-
-    const stmt = db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`);
-    stmt.run(...values, id);
-    
-    return getUserByIdAction(id);
+    users.update(id, updates);
+    revalidatePath('/');
+    return users.get(id) || null;
 }
 
 // LAB & ROOM ACTIONS
 export async function getLabsAction(): Promise<Lab[]> {
-    return db.prepare('SELECT * FROM labs').all() as Lab[];
+    return labs.all();
 }
 
 export async function addLabAction(lab: Lab) {
-    db.prepare('INSERT INTO labs (id, name, capacity) VALUES (?, ?, ?)').run(lab.id, lab.name, lab.capacity);
+    labs.insert(lab);
     
     // Auto-Provision PCs
-    const pcStmt = db.prepare('INSERT INTO pcs (id, pcNumber, labId, status) VALUES (?, ?, ?, ?)');
     for (let i = 0; i < lab.capacity; i++) {
-        pcStmt.run(`PC-${lab.id}-${i + 1}`, (i + 1).toString(), lab.id, 'available');
+        pcs.insert({
+            id: `PC-${lab.id}-${i + 1}`,
+            pcNumber: (i + 1).toString(),
+            labId: lab.id,
+            status: 'available'
+        });
     }
     revalidatePath('/');
 }
 
 export async function updateLabAction(id: string, updates: Partial<Lab>) {
-    const keys = Object.keys(updates);
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => (updates as any)[key]);
-    db.prepare(`UPDATE labs SET ${setClause} WHERE id = ?`).run(...values, id);
+    labs.update(id, updates);
     revalidatePath('/');
 }
 
 export async function deleteLabAction(id: string) {
-    db.prepare('DELETE FROM labs WHERE id = ?').run(id);
-    db.prepare('DELETE FROM pcs WHERE labId = ?').run(id);
+    labs.delete(id);
+    const labPcs = pcs.where(p => p.labId === id);
+    labPcs.forEach(p => pcs.delete(p.id));
     revalidatePath('/');
 }
 
 export async function getRoomsAction(): Promise<Room[]> {
-    return db.prepare('SELECT * FROM rooms').all() as Room[];
+    return rooms.all();
 }
 
 export async function addRoomAction(room: Room) {
-    db.prepare('INSERT INTO rooms (id, name, capacity) VALUES (?, ?, ?)').run(room.id, room.name, room.capacity);
+    rooms.insert(room);
     revalidatePath('/');
 }
 
 export async function deleteRoomAction(id: string) {
-    db.prepare('DELETE FROM rooms WHERE id = ?').run(id);
+    rooms.delete(id);
     revalidatePath('/');
 }
 
 export async function updateRoomAction(id: string, updates: Partial<Room>) {
-    const keys = Object.keys(updates);
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => (updates as any)[key]);
-    db.prepare(`UPDATE rooms SET ${setClause} WHERE id = ?`).run(...values, id);
+    rooms.update(id, updates);
     revalidatePath('/');
 }
 
 export async function getPcsAction(): Promise<Pc[]> {
-    return db.prepare('SELECT * FROM pcs').all() as Pc[];
+    return pcs.all();
 }
 
 export async function updatePcAction(id: string, updates: Partial<Pc>) {
-    const keys = Object.keys(updates);
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => (updates as any)[key]);
-    db.prepare(`UPDATE pcs SET ${setClause} WHERE id = ?`).run(...values, id);
+    pcs.update(id, updates);
+    revalidatePath('/');
 }
 
 // REQUEST ACTIONS
 export async function getLabRequestsAction(): Promise<LabRequest[]> {
-    return db.prepare('SELECT * FROM labrequests ORDER BY startTime DESC').all() as LabRequest[];
+    const all = labrequests.all();
+    return all.sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 }
 
 export async function addLabRequestAction(req: Omit<LabRequest, 'id'>) {
     const id = `REQ-${Date.now()}`;
-    const stmt = db.prepare(`
-        INSERT INTO labrequests (id, studentId, studentName, subjectId, labId, pcId, startTime, endTime, reason, status, requestType)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-        id,
-        req.studentId,
-        req.studentName,
-        req.subjectId,
-        req.labId,
-        req.pcId || '',
-        req.startTime,
-        req.endTime,
-        req.reason || '',
-        req.status,
-        req.requestType
-    );
+    labrequests.insert({ ...req, id } as LabRequest);
     revalidatePath('/');
 }
 
 export async function updateLabRequestAction(id: string, updates: Partial<LabRequest>) {
-    const keys = Object.keys(updates);
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => (updates as any)[key]);
-    db.prepare(`UPDATE labrequests SET ${setClause} WHERE id = ?`).run(...values, id);
+    labrequests.update(id, updates);
     revalidatePath('/');
 }
 
 // ATTENDANCE & AUDIT
 export async function getAttendancesAction(): Promise<Attendance[]> {
-    return db.prepare('SELECT * FROM attendance ORDER BY date DESC').all() as Attendance[];
+    const all = attendance.all();
+    return all.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function addAttendanceAction(att: Omit<Attendance, 'id'>) {
     const id = `ATT-${Date.now()}`;
-    const stmt = db.prepare(`
-        INSERT INTO attendance (id, studentId, studentName, subjectId, date, status, timeIn, timeOut, locationId, locationType, pcId, sessionId)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-        id,
-        att.studentId,
-        att.studentName || '',
-        att.subjectId,
-        att.date,
-        att.status,
-        att.timeIn || '',
-        att.timeOut || '',
-        att.locationId,
-        att.locationType,
-        att.pcId || '',
-        att.sessionId || ''
-    );
+    attendance.insert({ ...att, id } as Attendance);
     revalidatePath('/');
 }
 
 export async function updateAttendanceAction(id: string, updates: Partial<Attendance>) {
-    const keys = Object.keys(updates);
-    const setClause = keys.map(key => `${key} = ?`).join(', ');
-    const values = keys.map(key => (updates as any)[key]);
-    db.prepare(`UPDATE attendance SET ${setClause} WHERE id = ?`).run(...values, id);
+    attendance.update(id, updates);
     revalidatePath('/');
 }
 
 export async function addAuditLogAction(log: Omit<AuditLog, 'id' | 'timestamp'>) {
     const id = `AUDIT-${Date.now()}`;
     const timestamp = new Date().toISOString();
-    db.prepare('INSERT INTO auditlog (id, userId, userName, action, details, timestamp) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, log.userId, log.userName, log.action, log.details, timestamp);
+    auditlog.insert({ ...log, id, timestamp } as AuditLog);
 }
 
 export async function getAuditLogsAction(): Promise<AuditLog[]> {
-    return db.prepare('SELECT * FROM auditlog ORDER BY timestamp DESC').all() as AuditLog[];
+    const all = auditlog.all();
+    return all.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 // SYSTEM
 export async function cleanupExpiredSessionsAction() {
-    const now = new Date().toISOString();
-    const expired = db.prepare("SELECT * FROM labrequests WHERE status = 'approved' AND endTime < ?").all() as any[];
+    const now = new Date();
+    const expired = labrequests.where(r => r.status === 'approved' && new Date(r.endTime) < now);
     
-    for (const r of expired) {
+    expired.forEach(r => {
         if (r.pcId) {
-            db.prepare("UPDATE pcs SET status = 'available' WHERE id = ?").run(r.pcId);
+            pcs.update(r.pcId, { status: 'available' });
         }
-    }
+    });
     return { updated: expired.length };
 }
 
 export async function forceResetAllLabsAction() {
-    const rowCount = db.prepare("UPDATE pcs SET status = 'available'").run().changes;
-    // Also auto-timeout any active attendances
+    const allPcs = pcs.all();
+    allPcs.forEach(p => pcs.update(p.id, { status: 'available' }));
+    
     const timeOut = new Date().toLocaleTimeString('en-US', { hour12: false });
-    db.prepare("UPDATE attendance SET timeOut = ? WHERE timeOut = '' OR timeOut IS NULL").run(timeOut);
+    const activeAtt = attendance.where(a => !a.timeOut);
+    activeAtt.forEach(a => attendance.update(a.id, { timeOut }));
+    
     revalidatePath('/');
-    return { closedSessions: rowCount };
+    return { closedSessions: allPcs.length };
 }
 
 export async function updateSettingsAction(updates: any) {
-    const current = await getSettingsAction();
+    const currentStr = settings.get('main')?.value || '{}';
+    const current = JSON.parse(currentStr);
     const newData = JSON.stringify({ ...current, ...updates });
-    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('main', newData);
+    settings.upsert({ id: 'main', value: newData });
 }
 
 export async function getSettingsAction() {
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'main'").get() as any;
+    const row = settings.get('main');
     return row ? JSON.parse(row.value) : {};
 }
 
 export async function updateLastSeenAction(id: string) {
-    db.prepare('UPDATE users SET lastSeen = ? WHERE id = ?').run(new Date().toISOString(), id);
+    users.update(id, { lastSeen: new Date().toISOString() });
 }
 
-export async function getSubjectsAction() { return []; } // Legacy stub
+export async function getSubjectsAction() { return []; }

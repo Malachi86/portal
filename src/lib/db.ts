@@ -1,90 +1,121 @@
-import Database from 'better-sqlite3';
+
+import fs from 'fs';
 import path from 'path';
 
 /**
- * NEXUS ENGINE SQLITE ADAPTER
- * Consolidates all application data into a server-side SQLite database.
+ * NEXUS ENGINE PURE-JS DATABASE
+ * Replaces better-sqlite3 to avoid native compilation errors.
+ * Stores data in JSON files within the Nexus Engine data directory.
  */
 
-const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'portal.db');
-const db = new Database(dbPath);
+const getDbDir = () => {
+    // If DB_PATH is injected (e.g. data/app/app.db), we use its directory
+    if (process.env.DB_PATH) {
+        return path.dirname(process.env.DB_PATH);
+    }
+    // Fallback for local development
+    return path.join(process.cwd(), 'database');
+};
 
-// Initialize Schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    email TEXT,
-    password TEXT,
-    role TEXT,
-    department TEXT,
-    profilePic TEXT,
-    isApproved INTEGER DEFAULT 0,
-    isBanned INTEGER DEFAULT 0,
-    lastSeen TEXT
-  );
+const dbDir = getDbDir();
 
-  CREATE TABLE IF NOT EXISTS labs (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    capacity INTEGER
-  );
+// Ensure the data directory exists
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
 
-  CREATE TABLE IF NOT EXISTS rooms (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    capacity INTEGER
-  );
+class JsonTable<T extends { id: string }> {
+    private filePath: string;
 
-  CREATE TABLE IF NOT EXISTS pcs (
-    id TEXT PRIMARY KEY,
-    pcNumber TEXT,
-    labId TEXT,
-    status TEXT DEFAULT 'available'
-  );
+    constructor(tableName: string) {
+        this.filePath = path.join(dbDir, `${tableName}.json`);
+        if (!fs.existsSync(this.filePath)) {
+            fs.writeFileSync(this.filePath, JSON.stringify([]));
+        }
+    }
 
-  CREATE TABLE IF NOT EXISTS labrequests (
-    id TEXT PRIMARY KEY,
-    studentId TEXT,
-    studentName TEXT,
-    subjectId TEXT,
-    labId TEXT,
-    pcId TEXT,
-    startTime TEXT,
-    endTime TEXT,
-    reason TEXT,
-    status TEXT DEFAULT 'pending',
-    requestType TEXT DEFAULT 'use'
-  );
+    private read(): T[] {
+        try {
+            const content = fs.readFileSync(this.filePath, 'utf8');
+            return JSON.parse(content);
+        } catch (e) {
+            return [];
+        }
+    }
 
-  CREATE TABLE IF NOT EXISTS attendance (
-    id TEXT PRIMARY KEY,
-    studentId TEXT,
-    studentName TEXT,
-    subjectId TEXT,
-    date TEXT,
-    status TEXT,
-    timeIn TEXT,
-    timeOut TEXT,
-    locationId TEXT,
-    locationType TEXT,
-    pcId TEXT,
-    sessionId TEXT
-  );
+    private write(data: T[]) {
+        fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+    }
 
-  CREATE TABLE IF NOT EXISTS auditlog (
-    id TEXT PRIMARY KEY,
-    userId TEXT,
-    userName TEXT,
-    action TEXT,
-    details TEXT,
-    timestamp TEXT
-  );
+    all(): T[] {
+        return this.read();
+    }
 
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-`);
+    get(id: string): T | undefined {
+        return this.read().find(item => item.id === id);
+    }
+
+    insert(item: T) {
+        const data = this.read();
+        data.push(item);
+        this.write(data);
+    }
+
+    update(id: string, updates: Partial<T>) {
+        const data = this.read();
+        const index = data.findIndex(item => item.id === id);
+        if (index !== -1) {
+            data[index] = { ...data[index], ...updates };
+            this.write(data);
+        }
+    }
+
+    delete(id: string) {
+        const data = this.read();
+        const filtered = data.filter(item => item.id !== id);
+        this.write(filtered);
+    }
+
+    where(predicate: (item: T) => boolean): T[] {
+        return this.read().filter(predicate);
+    }
+
+    find(predicate: (item: T) => boolean): T | undefined {
+        return this.read().find(predicate);
+    }
+    
+    upsert(item: T) {
+        const data = this.read();
+        const index = data.findIndex(i => i.id === item.id);
+        if (index !== -1) {
+            data[index] = { ...data[index], ...item };
+        } else {
+            data.push(item);
+        }
+        this.write(data);
+    }
+}
+
+// Initialize Tables
+export const users = new JsonTable<any>('users');
+export const labs = new JsonTable<any>('labs');
+export const rooms = new JsonTable<any>('rooms');
+export const pcs = new JsonTable<any>('pcs');
+export const labrequests = new JsonTable<any>('labrequests');
+export const attendance = new JsonTable<any>('attendance');
+export const auditlog = new JsonTable<any>('auditlog');
+export const settings = new JsonTable<{ id: string; value: string }>('settings');
+
+// Default export for generic use if needed
+const db = {
+    users,
+    labs,
+    rooms,
+    pcs,
+    labrequests,
+    attendance,
+    auditlog,
+    settings
+};
 
 export default db;

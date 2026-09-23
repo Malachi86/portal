@@ -12,9 +12,11 @@ import MyRequests from '@/components/student/MyRequests';
 import AllRequests from '@/components/admin/AllRequests';
 import MakeRequest from '@/components/student/MakeRequest';
 import ProfileView from '@/components/shared/ProfileView';
+import Image from 'next/image';
+import { Bell, HelpCircle, LogOut } from 'lucide-react';
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [currentView, setCurrentView] = useState('home');
 
   if (loading) {
@@ -53,11 +55,43 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <SidebarNav currentView={currentView} onNavigate={setCurrentView} />
-      <main className="flex-1 overflow-y-auto p-6 md:p-10 bg-[#f4f7f8]">
-        {renderContent()}
-      </main>
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f4f7f8]">
+      {/* AMA TOP HEADER */}
+      <header className="h-20 bg-[#6D1B0A] flex items-center justify-between px-6 md:px-10 shrink-0 shadow-lg z-50">
+        <div className="flex items-center gap-4">
+          <Image 
+            src="/logo.png" 
+            alt="AMA Student Portal" 
+            width={240} 
+            height={60} 
+            className="h-14 w-auto object-contain"
+            priority
+          />
+        </div>
+        
+        <div className="flex items-center gap-6">
+          <button className="text-white/70 hover:text-white transition-colors">
+            <Bell size={24} />
+          </button>
+          <button className="hidden md:flex items-center gap-2 bg-[#f07148] hover:bg-[#d95d3a] text-white px-5 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-95">
+            <HelpCircle size={18} />
+            Tutorial
+          </button>
+          <button 
+            onClick={logout}
+            className="text-white/70 hover:text-white transition-colors p-2"
+          >
+            <LogOut size={26} />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <SidebarNav currentView={currentView} onNavigate={setCurrentView} />
+        <main className="flex-1 overflow-y-auto p-6 md:p-10">
+          {renderContent()}
+        </main>
+      </div>
     </div>
   );
 }

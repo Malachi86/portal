@@ -1,5 +1,6 @@
 {
-    "name": "AMA-Portal",
-    "type": "node",
-    "entry": "npm start"
+  "name": "AMA-Portal",
+  "type": "node",
+  "command": "npm start",
+  "database": "sqlite"
 }

@@ -4,16 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { getLabRequestsAction, updateLabRequestAction, getLabsAction, getPcsAction, updatePcAction } from '@/app/actions/dbActions';
 import { LabRequest, Lab, Pc } from '@/utils/storage';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Loader2, Activity, Monitor, ShieldAlert } from 'lucide-react';
+import { Loader2, Activity, Monitor, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const [requests, setRequests] = useState<LabRequest[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
-  const [pcs, setPcs] = useState<Pc[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,14 +22,12 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [r, l, p] = await Promise.all([
+      const [r, l] = await Promise.all([
         getLabRequestsAction(),
-        getLabsAction(),
-        getPcsAction()
+        getLabsAction()
       ]);
       setRequests(r.sort((a,b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
       setLabs(l);
-      setPcs(p);
     } finally {
       setLoading(false);
     }
@@ -44,6 +40,7 @@ export default function AdminDashboard() {
         await updatePcAction(req.pcId, { status: 'occupied' });
       }
       toast.success(`Request ${status}.`);
+      loadData();
     } catch (e) {
       toast.error("Process failed.");
     }
@@ -105,24 +102,29 @@ export default function AdminDashboard() {
                     <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{req.pcId ? `STATION: PC-${req.pcId.split('-').pop()}` : 'FULL CONTROL'}</p>
                   </td>
                   <td className="px-6 py-8 text-center">
-                    <Badge className={cn("px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-none", req.requestType === 'handle' ? "bg-orange-500 text-white" : "bg-primary/10 text-primary")}>
+                    <Badge className={cn("px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-none", req.requestType === 'handle' ? "bg-orange-50 text-white" : "bg-primary/10 text-primary")}>
                       {req.requestType === 'handle' ? 'HANDLER' : 'STATION USE'}
                     </Badge>
                   </td>
                   <td className="px-10 py-8 text-right">
                     {req.status === 'pending' ? (
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => handleAction(req, 'approved')} className="h-10 px-5 rounded-xl bg-green-500 text-white font-black uppercase text-[10px] shadow-lg hover:bg-green-600">Authorize</button>
-                        <button onClick={() => handleAction(req, 'declined')} className="h-10 px-5 rounded-xl bg-red-500 text-white font-black uppercase text-[10px] shadow-lg hover:bg-red-600">Reject</button>
+                        <button onClick={() => handleAction(req, 'approved')} className="h-10 px-5 rounded-xl bg-green-500 text-white font-black uppercase text-[10px] shadow-lg hover:bg-green-600 transition-all">Authorize</button>
+                        <button onClick={() => handleAction(req, 'declined')} className="h-10 px-5 rounded-xl bg-red-500 text-white font-black uppercase text-[10px] shadow-lg hover:bg-red-600 transition-all">Reject</button>
                       </div>
                     ) : (
-                      <Badge className={cn("px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-none", req.status === 'approved' ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-                        {req.status}
+                      <Badge className={cn("px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border-none shadow-sm", req.status === 'approved' ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                        {req.status.toUpperCase()}
                       </Badge>
                     )}
                   </td>
                 </tr>
               ))}
+              {requests.length === 0 && (
+                <tr>
+                    <td colSpan={4} className="p-20 text-center text-muted-foreground font-black uppercase tracking-[0.2em] opacity-30">No requests in registry</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

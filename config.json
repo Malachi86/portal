@@ -1,5 +1,5 @@
 {
-    "name": "AMA-Portal",
-    "type": "node",
-    "entry": "npm start"
+  "name": "AMA-Portal",
+  "type": "static",
+  "entry": "out"
 }

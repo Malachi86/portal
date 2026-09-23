@@ -56,32 +56,32 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#f4f7f8]">
-      {/* AMA TOP HEADER */}
-      <header className="h-20 bg-[#6D1B0A] flex items-center justify-between px-6 md:px-10 shrink-0 shadow-lg z-50">
-        <div className="flex items-center gap-4">
+      {/* AMA TOP HEADER - Enlarged to h-28 */}
+      <header className="h-28 bg-[#6D1B0A] flex items-center justify-between px-8 md:px-12 shrink-0 shadow-xl z-50">
+        <div className="flex items-center gap-6">
           <Image 
             src="/logo.png" 
             alt="AMA Student Portal" 
-            width={240} 
-            height={60} 
-            className="h-14 w-auto object-contain"
+            width={320} 
+            height={80} 
+            className="h-20 w-auto object-contain"
             priority
           />
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <button className="text-white/70 hover:text-white transition-colors">
-            <Bell size={24} />
+            <Bell size={28} />
           </button>
-          <button className="hidden md:flex items-center gap-2 bg-[#f07148] hover:bg-[#d95d3a] text-white px-5 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-95">
-            <HelpCircle size={18} />
+          <button className="hidden md:flex items-center gap-3 bg-[#f07148] hover:bg-[#d95d3a] text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all active:scale-95">
+            <HelpCircle size={22} />
             Tutorial
           </button>
           <button 
             onClick={logout}
             className="text-white/70 hover:text-white transition-colors p-2"
           >
-            <LogOut size={26} />
+            <LogOut size={32} />
           </button>
         </div>
       </header>

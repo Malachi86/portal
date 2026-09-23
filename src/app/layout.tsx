@@ -1,10 +1,8 @@
-
 'use client';
 
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
-import { FullscreenLock } from '@/components/fullscreen-lock';
 import { useEffect } from 'react';
 
 export default function RootLayout({
@@ -21,9 +19,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased bg-[#f4f7f8]">
         <AuthProvider>
-          <FullscreenLock>
-            {children}
-          </FullscreenLock>
+          {children}
           <Toaster />
         </AuthProvider>
       </body>

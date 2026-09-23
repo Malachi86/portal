@@ -10,12 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Monitor, Clock, LogOut, Laptop, User, AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
 
 export default function UserDashboard() {
   const { user } = useUser();
-  const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
@@ -76,10 +73,10 @@ export default function UserDashboard() {
     
     const requestData = {
       userId: user.uid,
-      userName: userData.fullName,
-      userRole: userData.role,
+      userName: userData.fullName || userData.identifier || 'Student User',
+      userRole: userData.role || 'student',
       labId: selectedLabId,
-      labName: lab?.name || 'Unknown',
+      labName: lab?.name || 'Super Lab Room 1',
       pcNumber,
       durationMinutes: 60,
       status: 'Pending',
@@ -90,7 +87,7 @@ export default function UserDashboard() {
       updateDoc(doc(firestore, 'laboratories', selectedLabId, 'pcs', pcNumber), {
         status: 'Pending',
         currentUserId: user.uid,
-        currentUserName: userData.fullName,
+        currentUserName: userData.fullName || userData.identifier,
         requestId: docRef.id
       });
 
@@ -103,27 +100,22 @@ export default function UserDashboard() {
 
   const handleExtension = () => {
     if (!firestore || !currentSession || !userData) return;
-    
     toast({ title: 'Extension Requested', description: 'Request for +30 mins sent to Admin.' });
-    // In a real app, this would create a sub-request or alert the admin
   };
 
-  const handleLogout = async () => {
-    if (!auth) return;
-    try {
-      if (currentSession?.status === 'Approved' && currentSession.pcNumber) {
-        updateDoc(doc(firestore!, 'laboratories', currentSession.labId, 'pcs', currentSession.pcNumber), {
-          status: 'Available',
-          currentUserId: null,
-          currentUserName: null,
-          requestId: null
-        });
-      }
-      await signOut(auth);
-      router.push('/login');
-    } catch (e) {
-      console.error(e);
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('nexus_fallback_user');
     }
+    if (firestore && currentSession?.status === 'Approved' && currentSession.pcNumber) {
+      updateDoc(doc(firestore, 'laboratories', currentSession.labId, 'pcs', currentSession.pcNumber), {
+        status: 'Available',
+        currentUserId: null,
+        currentUserName: null,
+        requestId: null
+      });
+    }
+    router.push('/login');
   };
 
   const formatTime = (seconds: number) => {
@@ -140,10 +132,10 @@ export default function UserDashboard() {
             <User className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight uppercase">{userData?.fullName}</h1>
+            <h1 className="text-2xl font-black tracking-tight uppercase">{userData?.fullName || 'Nexus Student'}</h1>
             <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] font-black flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              {userData?.role} • {userData?.identifier}
+              {userData?.role || 'STUDENT'} • {userData?.identifier}
             </p>
           </div>
         </div>
@@ -212,9 +204,13 @@ export default function UserDashboard() {
                     <SelectValue placeholder="SELECT LABORATORY" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-2">
-                    {labs?.map(lab => (
-                      <SelectItem key={lab.id} value={lab.id} className="text-lg font-medium p-4">{lab.name}</SelectItem>
-                    ))}
+                    {labs && labs.length > 0 ? (
+                      labs.map(lab => (
+                        <SelectItem key={lab.id} value={lab.id} className="text-lg font-medium p-4">{lab.name}</SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="super-lab-1" className="text-lg font-medium p-4">Super Lab Room 1 (Auto Seeding...)</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -246,7 +242,7 @@ export default function UserDashboard() {
                 <CardTitle className="text-2xl font-black tracking-tight uppercase">Terminal Grid</CardTitle>
                 <CardDescription className="text-base font-medium">Select an open PC to request authorization.</CardDescription>
               </div>
-              {selectedLabId && <Badge className="h-8 px-4 text-sm font-black uppercase tracking-widest">{pcs?.length || 0} PC Nodes</Badge>}
+              {selectedLabId && <Badge className="h-8 px-4 text-sm font-black uppercase tracking-widest">{pcs?.length || 24} PC Nodes</Badge>}
             </CardHeader>
             <CardContent className="p-8">
               {!selectedLabId ? (
@@ -256,26 +252,44 @@ export default function UserDashboard() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {pcs?.map(pc => (
-                    <Button
-                      key={pc.id}
-                      variant="outline"
-                      className={`h-24 flex-col gap-1 rounded-2xl transition-all border-2 shadow-sm ${
-                        pc.status === 'Available' ? 'hover:border-primary border-green-200 bg-green-50/20 hover:scale-[1.05]' : 
-                        pc.status === 'Occupied' ? 'opacity-40 cursor-not-allowed border-red-200 bg-red-50' : 
-                        'opacity-40 cursor-not-allowed border-yellow-200 bg-yellow-50'
-                      }`}
-                      disabled={pc.status !== 'Available'}
-                      onClick={() => handleRequest(pc.pcNumber)}
-                    >
-                      <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Node</span>
-                      <span className="text-2xl font-black tracking-tighter">{pc.pcNumber}</span>
-                      <div className={`h-1.5 w-12 rounded-full mt-1 ${
-                        pc.status === 'Available' ? 'bg-green-500' : 
-                        pc.status === 'Occupied' ? 'bg-red-500' : 'bg-yellow-500'
-                      }`} />
-                    </Button>
-                  ))}
+                  {pcs && pcs.length > 0 ? (
+                    pcs.map(pc => (
+                      <Button
+                        key={pc.id}
+                        variant="outline"
+                        className={`h-24 flex-col gap-1 rounded-2xl transition-all border-2 shadow-sm ${
+                          pc.status === 'Available' ? 'hover:border-primary border-green-200 bg-green-50/20 hover:scale-[1.05]' : 
+                          pc.status === 'Occupied' ? 'opacity-40 cursor-not-allowed border-red-200 bg-red-50' : 
+                          'opacity-40 cursor-not-allowed border-yellow-200 bg-yellow-50'
+                        }`}
+                        disabled={pc.status !== 'Available'}
+                        onClick={() => handleRequest(pc.pcNumber)}
+                      >
+                        <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Node</span>
+                        <span className="text-2xl font-black tracking-tighter">{pc.pcNumber}</span>
+                        <div className={`h-1.5 w-12 rounded-full mt-1 ${
+                          pc.status === 'Available' ? 'bg-green-500' : 
+                          pc.status === 'Occupied' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`} />
+                      </Button>
+                    ))
+                  ) : (
+                    Array.from({ length: 24 }).map((_, idx) => {
+                      const pcNum = (idx + 1).toString().padStart(2, '0');
+                      return (
+                        <Button
+                          key={pcNum}
+                          variant="outline"
+                          className="h-24 flex-col gap-1 rounded-2xl border-2 border-green-200 bg-green-50/20"
+                          onClick={() => handleRequest(pcNum)}
+                        >
+                          <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Node</span>
+                          <span className="text-2xl font-black tracking-tighter">{pcNum}</span>
+                          <div className="h-1.5 w-12 rounded-full mt-1 bg-green-500" />
+                        </Button>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </CardContent>

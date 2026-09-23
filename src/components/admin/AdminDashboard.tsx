@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,6 +5,7 @@ import { getLabRequestsAction, updateLabRequestAction, getLabsAction, getPcsActi
 import { LabRequest, Lab, Pc } from '@/utils/storage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Loader2, Activity, Monitor, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

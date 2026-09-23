@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Send, AlertCircle, Monitor, Building, Clock, Loader2 } from 'lucide-react';
-import { getUsersAction, getSubjectsAction, getLabsAction, getRoomsAction, getPcsAction, addLabRequestAction } from '@/app/actions/dbActions';
-import { Subject, User } from '@/utils/storage';
+import { Send, AlertCircle, Monitor, Building, Clock, Loader2, ShieldCheck, Zap } from 'lucide-react';
+import { getSubjectsAction, getLabsAction, getRoomsAction, getPcsAction, addLabRequestAction } from '@/app/actions/dbActions';
+import { Subject, Lab, Room, Pc } from '@/utils/storage';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -15,55 +15,69 @@ import { cn } from '@/lib/utils';
 export default function MakeRequest() {
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [labs, setLabs] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [availablePCs, setAvailablePCs] = useState<any[]>([]);
+  const [labs, setLabs] = useState<Lab[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [availablePCs, setAvailablePCs] = useState<Pc[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
   const [formData, setFormData] = useState({
-    subject: '',
+    subjectId: '',
     type: 'lab' as 'lab' | 'room',
-    labOrRoom: '',
-    pc: '',
+    requestType: 'use' as 'use' | 'handle',
+    locationId: '',
+    pcId: '',
     startTime: '',
     endTime: '',
     reason: ''
   });
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if(user) {
+    if (user) {
       loadInitialData();
     }
   }, [user]);
 
   useEffect(() => {
-    if (formData.type === 'lab' && formData.labOrRoom) {
-      loadAvailablePCs(formData.labOrRoom);
+    if (formData.type === 'lab' && formData.locationId) {
+      loadAvailablePCs(formData.locationId);
+    } else {
+      setAvailablePCs([]);
+      setFormData(prev => ({ ...prev, pcId: '' }));
     }
-  }, [formData.labOrRoom, formData.type]);
+  }, [formData.locationId, formData.type]);
 
   const loadInitialData = async () => {
     if (!user) return;
-    const [subjs, allLabs, allRooms] = await Promise.all([
-      getSubjectsAction(),
-      getLabsAction(),
-      getRoomsAction()
-    ]);
-    setSubjects(subjs);
-    setLabs(allLabs);
-    setRooms(allRooms);
+    try {
+      const [subjs, allLabs, allRooms] = await Promise.all([
+        getSubjectsAction(),
+        getLabsAction(),
+        getRoomsAction()
+      ]);
+      setSubjects(subjs);
+      setLabs(allLabs);
+      setRooms(allRooms);
+    } finally {
+      setInitialLoading(false);
+    }
   };
 
   const loadAvailablePCs = async (labId: string) => {
-    const allPcs = await getPcsAction();
-    const available = allPcs.filter(pc => pc.labId === labId && pc.status === 'available');
-    setAvailablePCs(available);
+    try {
+      const allPcs = await getPcsAction();
+      const available = allPcs.filter(pc => pc.labId === labId && pc.status === 'available');
+      setAvailablePCs(available);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!formData.subject || !formData.labOrRoom || !formData.startTime || !formData.endTime) {
-      toast.error('Required fields missing.');
+    if (!formData.subjectId || !formData.locationId || !formData.startTime || !formData.endTime || !formData.pcId) {
+      toast.error('Required fields missing. Please select a Subject, Unit, PC, and Time.');
       return;
     }
     
@@ -73,128 +87,195 @@ export default function MakeRequest() {
         await addLabRequestAction({
           studentId: user.id,
           studentName: user.name,
-          subjectId: formData.subject,
-          labId: formData.labOrRoom,
-          pcId: formData.type === 'lab' ? formData.pc : undefined,
+          subjectId: formData.subjectId,
+          labId: formData.locationId,
+          pcId: formData.pcId,
           startTime: `${today}T${formData.startTime}`,
           endTime: `${today}T${formData.endTime}`,
           reason: formData.reason,
-          status: 'pending' as const,
-          requestType: 'use'
+          status: 'pending',
+          requestType: formData.requestType
         });
-        toast.success("Request submitted successfully!");
-        setFormData({ subject: '', type: 'lab', labOrRoom: '', pc: '', startTime: '', endTime: '', reason: '' });
+        toast.success("Registry Signal Sent!", { description: "Wait for Admin or Faculty Handler authorization." });
+        setFormData({ 
+          subjectId: '', 
+          type: 'lab', 
+          requestType: 'use', 
+          locationId: '', 
+          pcId: '', 
+          startTime: '', 
+          endTime: '', 
+          reason: '' 
+        });
     } catch {
-        toast.error("Failed to submit request.");
+        toast.error("Transmission failed. Database unreachable.");
     } finally {
         setLoading(false);
     }
   };
 
+  if (initialLoading) return <div className="flex justify-center p-32"><Loader2 className="animate-spin text-primary h-12 w-12" /></div>;
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
+    <div className="max-w-6xl mx-auto space-y-10 pb-20 animate-in fade-in duration-500">
       <div>
-        <h2 className="text-4xl font-black text-primary tracking-tighter uppercase leading-none">New Reservation</h2>
-        <p className="text-xs font-bold text-muted-foreground mt-2 uppercase tracking-widest">Authorize workstation or room usage</p>
+        <h2 className="text-[3.5rem] font-black text-primary tracking-tighter uppercase leading-none">New Reservation</h2>
+        <p className="text-[11px] font-black text-muted-foreground mt-2 uppercase tracking-[0.4em]">Infrastructure Authorization Hub</p>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-2xl border-none p-10 md:p-16 space-y-10">
-        <form onSubmit={handleSubmit} className="space-y-10">
-          
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Subject Load</Label>
-            <select
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className="w-full h-14 bg-muted/10 border-none rounded-2xl px-6 font-bold text-foreground focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all"
-              required
-            >
-              <option value="">Select Target Subject</option>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-              ))}
-            </select>
-          </div>
+      <div className="bg-white rounded-[3rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border-none p-12 md:p-20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12 pointer-events-none">
+          <Zap size={200} fill="currentColor" className="text-primary" />
+        </div>
 
+        <form onSubmit={handleSubmit} className="space-y-12 relative z-10">
+          
+          {/* Protocol Mode Toggle */}
           <div className="space-y-4">
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Infrastructure Type</Label>
-            <div className="flex gap-8">
-              {['lab', 'room'].map(t => (
-                <label key={t} className="flex items-center gap-3 cursor-pointer group">
-                  <div className={cn("w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all", formData.type === t ? "border-primary bg-primary" : "border-primary/20")}>
-                    {formData.type === t && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
-                  <input type="radio" value={t} checked={formData.type === t} onChange={(e) => setFormData({ ...formData, type: e.target.value as any, labOrRoom: '', pc: ''})} className="hidden" />
-                  <span className="font-bold text-sm uppercase tracking-tight">{t === 'lab' ? 'Laboratory' : 'Classroom'}</span>
-                </label>
-              ))}
+            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-primary ml-1">Protocol Mode</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, requestType: 'use' })}
+                className={cn(
+                  "h-20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border-2",
+                  formData.requestType === 'use' 
+                    ? "bg-primary text-white border-primary shadow-2xl scale-[1.02]" 
+                    : "bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <Monitor size={20} />
+                <span className="font-black uppercase text-[10px] tracking-widest">Station Use</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, requestType: 'handle' })}
+                className={cn(
+                  "h-20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border-2",
+                  formData.requestType === 'handle' 
+                    ? "bg-primary text-white border-primary shadow-2xl scale-[1.02]" 
+                    : "bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <ShieldCheck size={20} />
+                <span className="font-black uppercase text-[10px] tracking-widest">Facility Handle</span>
+              </button>
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">{formData.type === 'lab' ? 'Lab Unit' : 'Room Unit'}</Label>
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Academic Load</Label>
               <select
-                value={formData.labOrRoom}
-                onChange={(e) => setFormData({ ...formData, labOrRoom: e.target.value, pc: '' })}
-                className="w-full h-14 bg-muted/10 border-none rounded-2xl px-6 font-bold text-foreground focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all"
+                value={formData.subjectId}
+                onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
+                className="w-full h-16 bg-muted/20 border-none rounded-2xl px-8 font-black text-sm uppercase tracking-tight focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all shadow-inner"
                 required
               >
-                <option value="">-- Choose Unit --</option>
-                {(formData.type === 'lab' ? labs : rooms).map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name} (Cap: {loc.capacity})</option>
+                <option value="">-- SELECT SUBJECT --</option>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
                 ))}
               </select>
             </div>
 
-            {formData.type === 'lab' && formData.labOrRoom && (
-              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary ml-1">Workstation node ({availablePCs.length} Active)</Label>
-                <select
-                  value={formData.pc}
-                  onChange={(e) => setFormData({ ...formData, pc: e.target.value })}
-                  className="w-full h-14 bg-primary/5 border-2 border-primary/10 rounded-2xl px-6 font-bold text-primary focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all"
-                  required
-                >
-                  <option value="">Select PC</option>
-                  {availablePCs.map((pc) => (
-                    <option key={pc.id} value={pc.id}>PC {pc.pcNumber}</option>
-                  ))}
-                </select>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Facility Type</Label>
+              <div className="flex gap-10 h-16 items-center px-4">
+                {['lab', 'room'].map(t => (
+                  <label key={t} className="flex items-center gap-4 cursor-pointer group">
+                    <div className={cn(
+                      "w-7 h-7 rounded-full border-4 flex items-center justify-center transition-all", 
+                      formData.type === t ? "border-primary bg-primary" : "border-primary/20"
+                    )}>
+                      {formData.type === t && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <input type="radio" value={t} checked={formData.type === t} onChange={(e) => setFormData({ ...formData, type: e.target.value as any, locationId: '', pcId: ''})} className="hidden" />
+                    <span className="font-black text-xs uppercase tracking-widest text-slate-700">{t === 'lab' ? 'Laboratory' : 'Classroom'}</span>
+                  </label>
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Start Mark</Label>
-              <Input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required className="h-14 rounded-2xl border-none bg-muted/10 font-bold" />
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">{formData.type === 'lab' ? 'Laboratory Unit' : 'Lecture Unit'}</Label>
+              <select
+                value={formData.locationId}
+                onChange={(e) => setFormData({ ...formData, locationId: e.target.value, pcId: '' })}
+                className="w-full h-16 bg-muted/20 border-none rounded-2xl px-8 font-black text-sm uppercase tracking-tight focus:ring-2 focus:ring-primary/20 outline-none appearance-none transition-all shadow-inner"
+                required
+              >
+                <option value="">-- CHOOSE FACILITY --</option>
+                {(formData.type === 'lab' ? labs : rooms).map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()} (CAP: {loc.capacity})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-1 transition-colors", formData.locationId ? "text-primary" : "text-muted-foreground/30")}>Workstation Assignment</Label>
+              <select
+                value={formData.pcId}
+                disabled={!formData.locationId || formData.type !== 'lab'}
+                onChange={(e) => setFormData({ ...formData, pcId: e.target.value })}
+                className={cn(
+                  "w-full h-16 rounded-2xl px-8 font-black text-sm uppercase tracking-tight focus:ring-2 outline-none appearance-none transition-all shadow-inner",
+                  formData.locationId && formData.type === 'lab' ? "bg-primary/5 border-2 border-primary/10 text-primary" : "bg-muted/10 border-none text-muted-foreground/30"
+                )}
+                required={formData.type === 'lab'}
+              >
+                <option value="">-- SELECT STATION --</option>
+                {availablePCs.map((pc) => (
+                  <option key={pc.id} value={pc.id}>PC-{pc.pcNumber}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock In</Label>
+              <Input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">End Mark</Label>
-              <Input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required className="h-14 rounded-2xl border-none bg-muted/10 font-bold" />
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Clock Out</Label>
+              <Input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} required className="h-16 rounded-2xl border-none bg-muted/20 font-black text-xl px-8 shadow-inner" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Activity Log Note</Label>
+            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Terminal Purpose</Label>
             <Textarea
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              className="rounded-3xl p-8 border-none bg-muted/10 min-h-[140px] font-medium text-base focus:ring-2 focus:ring-primary/20 outline-none"
-              placeholder="State purpose for entry..."
+              className="rounded-[2.5rem] p-10 border-none bg-muted/10 min-h-[160px] font-bold text-lg focus:ring-2 focus:ring-primary/20 outline-none shadow-inner"
+              placeholder="State objective for session access..."
             />
           </div>
 
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-20 bg-primary hover:bg-primary/90 text-white font-black uppercase text-sm tracking-[0.25em] rounded-2xl shadow-xl shadow-primary/20 gap-4 transition-all active:scale-95 disabled:grayscale"
+            className="w-full h-24 bg-primary hover:bg-primary/90 text-white font-black uppercase text-base tracking-[0.4em] rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(109,27,10,0.4)] gap-5 transition-all active:scale-95 disabled:grayscale"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <Send size={24} />}
-            TRANSMIT PROTOCOL
+            {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <Send size={32} />}
+            TRANSMIT REGISTRY SIGNAL
           </Button>
         </form>
+      </div>
+
+      <div className="p-10 bg-primary/5 rounded-[3rem] border-2 border-primary/5 flex items-start gap-8 shadow-inner">
+        <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center text-primary shadow-lg shrink-0">
+          <AlertCircle size={32} />
+        </div>
+        <div className="space-y-2">
+          <h4 className="font-black uppercase tracking-tight text-primary text-xl">Operational Protocol</h4>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+            Requests are monitored in real-time. Unauthorized station usage will trigger the terminal lock. Always check out via the sidebar terminal before the scheduled end time.
+          </p>
+        </div>
       </div>
     </div>
   );
